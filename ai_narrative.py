@@ -6,54 +6,131 @@ class AINarrative:
     def __init__(self):
         api_key = os.getenv("GROQ_API_KEY")
 
-        if not api_key:
-            raise ValueError("GROQ_API_KEY not set in environment.")
-
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.groq.com/openai/v1"
-        )
+        if api_key:
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://api.groq.com/openai/v1"
+            )
+        else:
+            self.client = None
 
     def generate_summary(self, user_query, intent, metrics, risk_summary, health_score):
 
-        formatted_metrics = f"""
-OVERALL WIN RATE: {metrics['overall_win_rate']*100:.2f}%
-WIN RATE TREND: {metrics['win_rate_trend']}
-WEAKEST LEAD SOURCE: {metrics['weakest_lead_source']}
-AVERAGE SALES CYCLE: {metrics['average_sales_cycle']} days
-MEDIAN SALES CYCLE: {metrics['median_sales_cycle']} days
-STALLED DEALS: {metrics['stalled_deal_percentage']*100:.2f}%
-MEAN ACV: {metrics['acv_stats']['mean_acv']:.2f}
-TOTAL REVENUE: {metrics['acv_stats']['total_revenue']:.2f}
-HIGH RISK PERCENTAGE: {risk_summary['high_risk_percentage']*100:.2f}%
-AVERAGE RISK SCORE: {risk_summary['average_risk_score']}
-PIPELINE HEALTH SCORE: {health_score}
-"""
+        # -----------------------------
+        # Deterministic Executive Logic
+        # -----------------------------
 
-        prompt = f"""
-You are an executive sales intelligence analyst.
+        if intent == "risk":
+            return {
+                "executive_summary": (
+                    f"{risk_summary['high_risk_percentage']*100:.2f}% of deals fall into the high-risk category "
+                    f"with an average risk score of {risk_summary['average_risk_score']}. "
+                    "These deals are most likely to be lost, particularly those exceeding the median sales cycle."
+                ),
+                "key_risks": [
+                    f"High-risk exposure: {risk_summary['high_risk_percentage']*100:.2f}%",
+                    f"Average risk score: {risk_summary['average_risk_score']}",
+                    f"Stalled deals: {metrics['stalled_deal_percentage']*100:.2f}%"
+                ],
+                "data_insights": [
+                    f"High Risk Percentage: {risk_summary['high_risk_percentage']*100:.2f}%",
+                    f"Average Risk Score: {risk_summary['average_risk_score']}"
+                ],
+                "recommended_actions": [
+                    "Prioritize intervention on high-risk, high-ACV deals.",
+                    "Escalate stalled opportunities exceeding cycle thresholds.",
+                    "Review lead source quality contributing to risk exposure."
+                ],
+                "confidence_score": "High"
+            }
 
-User Question:
+        if intent == "win_rate":
+            trend = metrics["win_rate_trend"]
+            weakest = metrics["weakest_lead_source"]
+
+            return {
+                "executive_summary": (
+                    f"Win rate is {trend['trend_direction'].lower()}, moving from "
+                    f"{trend.get('previous_win_rate', 0)*100:.2f}% to "
+                    f"{trend.get('latest_win_rate', 0)*100:.2f}%. "
+                    f"The weakest lead source is {weakest['weakest_source']} "
+                    f"with a win rate of {weakest['win_rate']*100:.2f}%."
+                ),
+                "key_risks": [
+                    f"Declining win-rate trend: {trend['trend_direction']}",
+                    f"Weakest lead source: {weakest['weakest_source']}"
+                ],
+                "data_insights": [
+                    f"Previous Win Rate: {trend.get('previous_win_rate', 0)*100:.2f}%",
+                    f"Latest Win Rate: {trend.get('latest_win_rate', 0)*100:.2f}%"
+                ],
+                "recommended_actions": [
+                    "Rebalance acquisition mix toward higher-performing lead sources.",
+                    "Investigate stalled deals contributing to conversion pressure.",
+                    "Audit qualification standards for weaker segments."
+                ],
+                "confidence_score": "High"
+            }
+
+        if intent == "pipeline_health":
+            return {
+                "executive_summary": (
+                    f"Pipeline health score is {health_score}, reflecting current conversion efficiency, "
+                    f"risk exposure of {risk_summary['high_risk_percentage']*100:.2f}%, "
+                    f"and stalled deal ratio of {metrics['stalled_deal_percentage']*100:.2f}%."
+                ),
+                "key_risks": [
+                    f"High-risk exposure: {risk_summary['high_risk_percentage']*100:.2f}%",
+                    f"Stalled deals: {metrics['stalled_deal_percentage']*100:.2f}%"
+                ],
+                "data_insights": [
+                    f"Pipeline Health Score: {health_score}",
+                    f"Win Rate Trend: {metrics['win_rate_trend']['trend_direction']}"
+                ],
+                "recommended_actions": [
+                    "Reduce stalled deal backlog.",
+                    "Mitigate high-risk revenue concentration.",
+                    "Improve lead source performance variance."
+                ],
+                "confidence_score": "High"
+            }
+
+        if intent == "stalled":
+            return {
+                "executive_summary": (
+                    f"{metrics['stalled_deal_percentage']*100:.2f}% of deals exceed 1.5× median sales cycle, "
+                    "indicating potential bottlenecks in deal progression."
+                ),
+                "key_risks": [
+                    f"Elevated stalled deal ratio: {metrics['stalled_deal_percentage']*100:.2f}%"
+                ],
+                "data_insights": [
+                    f"Median Sales Cycle: {metrics['median_sales_cycle']} days"
+                ],
+                "recommended_actions": [
+                    "Audit delayed opportunities.",
+                    "Introduce cycle acceleration initiatives.",
+                    "Reprioritize long-running deals."
+                ],
+                "confidence_score": "High"
+            }
+
+        # -----------------------------
+        # Fallback to LLM if needed
+        # -----------------------------
+
+        if self.client:
+            prompt = f"""
+Answer the following executive sales question clearly and concisely:
+
 "{user_query}"
 
-Primary Intent: {intent}
+Use only these metrics:
+{metrics}
+{risk_summary}
+Health Score: {health_score}
 
-You MUST answer the user's question directly.
-
-If the question is about:
-- Risk → Focus on high-risk deals and loss probability.
-- Pipeline health → Focus on overall health score and structural risks.
-- Win rate → Use trend and weakest segment.
-- Sales cycle → Focus on cycle metrics and stalled deals.
-- ACV → Focus on revenue and deal value insights.
-
-Do NOT default to global win-rate commentary unless relevant to the question.
-
-Use only the metrics provided below.
-Respond ONLY in valid JSON.
-
-Format strictly:
-
+Return JSON:
 {{
   "executive_summary": "",
   "key_risks": [],
@@ -61,23 +138,27 @@ Format strictly:
   "recommended_actions": [],
   "confidence_score": ""
 }}
-
-Metrics:
-{formatted_metrics}
 """
 
-        response = self.client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "Return clean JSON only. No explanations."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0
-        )
+            response = self.client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0
+            )
 
-        content = response.choices[0].message.content.strip()
+            content = response.choices[0].message.content.strip()
 
-        if content.startswith("```"):
-            content = content.replace("```json", "").replace("```", "").strip()
+            if content.startswith("```"):
+                content = content.replace("```json", "").replace("```", "").strip()
 
-        return content
+            import json
+            return json.loads(content)
+
+        # Absolute fallback
+        return {
+            "executive_summary": "Deterministic analysis completed.",
+            "key_risks": [],
+            "data_insights": [],
+            "recommended_actions": [],
+            "confidence_score": "Moderate"
+        }

@@ -102,7 +102,7 @@ if query:
     try:
         ai = AINarrative()
         response = ai.generate_summary(query, intent, metrics, risk_summary, health_score)
-        parsed = json.loads(response)
+        parsed = response
 
         st.success("✔ Executive insight analysis from computed sales metrics")
 
