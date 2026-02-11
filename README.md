@@ -3,7 +3,9 @@
 ## Overview
 
 This project implements a deterministic Sales Intelligence & Decision Engine designed to diagnose declining win rates despite stable pipeline volume.
-Deployed at https://skygeniaitest.streamlit.app/
+
+* Deployed at https://skygeniaitest.streamlit.app/
+* Video Link at https://drive.google.com/file/d/1lkiEk9PN6ft24160x6mQu-7SeUaJq44_/view?usp=sharing
 
 ### Pipeline: 
 
