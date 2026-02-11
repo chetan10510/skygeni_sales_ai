@@ -5,21 +5,21 @@
 This project implements a deterministic Sales Intelligence & Decision Engine designed to diagnose declining win rates despite stable pipeline volume.
 
 [User Query]
-↓
+→
 [Streamlit UI Layer]
-↓
+→
 [Guardrails + Intent Detection]
-↓
+→
 [Deterministic Decision Engine]
-↓
+→
 [Risk Model + Health Index]
-↓
+→
 [Visualization Router]
-↓
+→
 [AI Narrative Layer]
-↓
+→
 [Fallback Logic]
-↓
+→
 [Executive Output + Charts]
 
 
