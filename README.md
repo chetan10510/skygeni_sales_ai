@@ -4,6 +4,8 @@
 
 This project implements a deterministic Sales Intelligence & Decision Engine designed to diagnose declining win rates despite stable pipeline volume.
 
+### Pipeline: 
+
 [User Query]
 →
 [Streamlit UI Layer]
