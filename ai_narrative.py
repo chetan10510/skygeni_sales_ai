@@ -14,31 +14,45 @@ class AINarrative:
             base_url="https://api.groq.com/openai/v1"
         )
 
-    def generate_summary(self, intent, metrics, risk_summary, health_score):
+    def generate_summary(self, user_query, intent, metrics, risk_summary, health_score):
 
         formatted_metrics = f"""
-WIN RATE: {metrics['overall_win_rate']*100:.2f} percent
+OVERALL WIN RATE: {metrics['overall_win_rate']*100:.2f}%
 WIN RATE TREND: {metrics['win_rate_trend']}
 WEAKEST LEAD SOURCE: {metrics['weakest_lead_source']}
 AVERAGE SALES CYCLE: {metrics['average_sales_cycle']} days
 MEDIAN SALES CYCLE: {metrics['median_sales_cycle']} days
-STALLED DEALS: {metrics['stalled_deal_percentage']*100:.2f} percent
+STALLED DEALS: {metrics['stalled_deal_percentage']*100:.2f}%
 MEAN ACV: {metrics['acv_stats']['mean_acv']:.2f}
 TOTAL REVENUE: {metrics['acv_stats']['total_revenue']:.2f}
-HIGH RISK PERCENTAGE: {risk_summary['high_risk_percentage']*100:.2f}
+HIGH RISK PERCENTAGE: {risk_summary['high_risk_percentage']*100:.2f}%
+AVERAGE RISK SCORE: {risk_summary['average_risk_score']}
 PIPELINE HEALTH SCORE: {health_score}
 """
 
         prompt = f"""
 You are an executive sales intelligence analyst.
 
-Answer the user's question directly.
-If win rate is declining, explain why using trend and weakest segment data.
-Identify probable root causes using provided metrics.
+User Question:
+"{user_query}"
 
+Primary Intent: {intent}
+
+You MUST answer the user's question directly.
+
+If the question is about:
+- Risk → Focus on high-risk deals and loss probability.
+- Pipeline health → Focus on overall health score and structural risks.
+- Win rate → Use trend and weakest segment.
+- Sales cycle → Focus on cycle metrics and stalled deals.
+- ACV → Focus on revenue and deal value insights.
+
+Do NOT default to global win-rate commentary unless relevant to the question.
+
+Use only the metrics provided below.
 Respond ONLY in valid JSON.
 
-Format:
+Format strictly:
 
 {{
   "executive_summary": "",
@@ -48,8 +62,6 @@ Format:
   "confidence_score": ""
 }}
 
-User Intent: {intent}
-
 Metrics:
 {formatted_metrics}
 """
@@ -57,7 +69,7 @@ Metrics:
         response = self.client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Output clean JSON only."},
+                {"role": "system", "content": "Return clean JSON only. No explanations."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0

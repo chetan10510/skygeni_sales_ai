@@ -101,7 +101,7 @@ if query:
 
     try:
         ai = AINarrative()
-        response = ai.generate_summary(intent, metrics, risk_summary, health_score)
+        response = ai.generate_summary(query, intent, metrics, risk_summary, health_score)
         parsed = json.loads(response)
 
         st.success("✔ Executive insight analysis from computed sales metrics")
@@ -149,7 +149,12 @@ if query:
     visuals = route_visuals(intent, metrics, engine.df, risk_df, health_score)
 
     for fig in visuals:
-        st.plotly_chart(fig, use_container_width=True)
+        if fig is not None:
+            try:
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception:
+                pass
+
 
 # -----------------------------
 # Architectural Note (Subtle Positioning)
